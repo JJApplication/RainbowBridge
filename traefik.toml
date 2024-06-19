@@ -1,0 +1,65 @@
+debug = true
+logLevel = "DEBUG"
+InsecureSkipVerify = true
+defaultEntryPoints = ["http", "https"]
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+  [entryPoints.https]
+  address = ":443"
+
+[providers.file]
+  filename = "traefik.toml"
+
+[tls]
+  [tls.certificates]
+    [tls.certificates.renj]
+      certFile = "/renj.io/ssl/fullchain.cer"
+      keyFile = "/renj.io/ssl/ssl.key"
+    [tls.certificates.jjapp]
+      certFile = "/renj.io/ssl2/fullchain.cer"
+      keyFile = "/renj.io/ssl2/ssl.key"
+
+# https域名优先重定向
+[http.routers]
+  [http.routers.https-renj]
+    entryPoints = ["https"]
+    rule = "HostRegexp(`((dev|blog|service|page|pkg|x|me).renj.io|^renj.io)`)"
+    middlewares = ["compress"]
+    tls = true
+    service = "service"
+  [http.routers.https-jjapp]
+    entryPoints = ["https"]
+    rule = "Host(`jjapp.dev`)"
+    middlewares = ["compress"]
+    tls = true
+    service = "service"    
+  [http.routers.http2https]
+    entryPoints = ["http"]
+    middlewares = ["redirect-to-https", "compress"]
+    rule = "HostRegexp(`((dev|blog|service|page|pkg|x|me).renj.io|^renj.io|jjapp.dev)`)"
+    service = "service"
+  [http.routers.web]
+    entryPoints = ["http"]
+    rule = "PathPrefix(`/`)"
+    middlewares = ["compress"]
+    service = "service"
+
+[http.services]
+  [http.services.service]
+    [http.services.service.loadBalancer]
+       [[http.services.service.loadBalancer.servers]]
+         url = "http://localhost:8888"
+
+[http.middlewares]
+  [http.middlewares.redirect-to-https]
+    [http.middlewares.redirect-to-https.redirectScheme]
+      scheme =  "https"
+      permanent = true
+  [http.middlewares.compress]
+    [http.middlewares.compress.compress]
+      excludedContentTypes = ["text/event-stream"]
+      minResponseBodyBytes = 2048
+      defaultEncoding = "gzip"
+    
