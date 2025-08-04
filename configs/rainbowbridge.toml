@@ -1,0 +1,375 @@
+# RainbowBridge Configuration File
+# 基于traefik.toml格式的高性能网关配置
+
+# 全局配置
+debug = false
+logLevel = "INFO"
+InsecureSkipVerify = true
+defaultEntryPoints = ["http", "https"]
+
+# 入口点配置
+[entryPoints]
+  [entryPoints.http]
+    address = ":80"
+  [entryPoints.https]
+    address = ":443"
+  [entryPoints.api]
+    address = ":8080"
+
+# 提供者配置
+[providers]
+  [providers.file]
+    filename = "configs/rainbowbridge.toml"
+    watch = true
+
+# TLS配置
+[tls]
+  [tls.certificates]
+    [tls.certificates.default]
+      certFile = "certs/server.crt"
+      keyFile = "certs/server.key"
+    [tls.certificates.example]
+      certFile = "certs/example.com.crt"
+      keyFile = "certs/example.com.key"
+
+# HTTP配置
+[http]
+  # 路由配置
+  [http.routers]
+    # HTTPS路由 - 主域名
+    [http.routers.https-main]
+      entryPoints = ["https"]
+      rule = "Host(`example.com`) || Host(`www.example.com`)"
+      middlewares = ["compress", "error", "limit", "customHeader", "trace"]
+      tls = true
+      service = "backend-service"
+      priority = 100
+    
+    # HTTPS路由 - API服务
+    [http.routers.https-api]
+      entryPoints = ["https"]
+      rule = "Host(`api.example.com`)"
+      middlewares = ["compress", "error", "limit", "customHeader", "trace", "rateLimit"]
+      tls = true
+      service = "api-service"
+      priority = 200
+    
+    # HTTP自动重定向到HTTPS
+    [http.routers.http2https]
+      entryPoints = ["http"]
+      middlewares = ["redirect-to-https"]
+      rule = "HostRegexp(`{host:.+}`)"
+      service = "backend-service"
+      priority = 1
+    
+    # WebSocket路由
+    [http.routers.websocket]
+      entryPoints = ["https"]
+      rule = "Host(`ws.example.com`) && PathPrefix(`/ws`)"
+      middlewares = ["trace"]
+      tls = true
+      service = "websocket-service"
+      priority = 300
+    
+    # gRPC路由
+    [http.routers.grpc]
+      entryPoints = ["https"]
+      rule = "Host(`grpc.example.com`)"
+      middlewares = ["trace"]
+      tls = true
+      service = "grpc-service"
+      priority = 400
+    
+    # 静态文件路由
+    [http.routers.static]
+      entryPoints = ["https"]
+      rule = "Host(`static.example.com`) || PathPrefix(`/static`)"
+      middlewares = ["compress", "customHeader"]
+      tls = true
+      service = "static-service"
+      priority = 50
+
+  # 服务配置
+  [http.services]
+    # 后端服务
+    [http.services.backend-service]
+      [http.services.backend-service.loadBalancer]
+        [[http.services.backend-service.loadBalancer.servers]]
+          url = "http://localhost:8888"
+          weight = 1
+        [[http.services.backend-service.loadBalancer.servers]]
+          url = "http://localhost:8889"
+          weight = 1
+        [http.services.backend-service.loadBalancer.healthCheck]
+          path = "/health"
+          interval = "30s"
+          timeout = "5s"
+    
+    # API服务
+    [http.services.api-service]
+      [http.services.api-service.loadBalancer]
+        [[http.services.api-service.loadBalancer.servers]]
+          url = "http://localhost:9000"
+          weight = 2
+        [[http.services.api-service.loadBalancer.servers]]
+          url = "http://localhost:9001"
+          weight = 1
+        [http.services.api-service.loadBalancer.healthCheck]
+          path = "/api/health"
+          interval = "30s"
+          timeout = "5s"
+    
+    # WebSocket服务
+    [http.services.websocket-service]
+      [http.services.websocket-service.loadBalancer]
+        [[http.services.websocket-service.loadBalancer.servers]]
+          url = "http://localhost:9100"
+    
+    # gRPC服务
+    [http.services.grpc-service]
+      [http.services.grpc-service.loadBalancer]
+        [[http.services.grpc-service.loadBalancer.servers]]
+          url = "http://localhost:9200"
+    
+    # 静态文件服务
+    [http.services.static-service]
+      [http.services.static-service.loadBalancer]
+        [[http.services.static-service.loadBalancer.servers]]
+          url = "http://localhost:9300"
+
+  # 中间件配置
+  [http.middlewares]
+    # 重定向到HTTPS
+    [http.middlewares.redirect-to-https]
+      [http.middlewares.redirect-to-https.redirectScheme]
+        scheme = "https"
+        permanent = true
+    
+    # 启用gzip压缩
+    [http.middlewares.compress]
+      [http.middlewares.compress.compress]
+        excludedContentTypes = ["text/event-stream", "application/grpc"]
+        minResponseBodyBytes = 1024
+        defaultEncoding = "gzip"
+    
+    # 错误处理
+    [http.middlewares.error]
+      [http.middlewares.error.errors]
+        status = ["404", "500", "501", "502", "503", "504"]
+        service = "backend-service"
+        query = "/error/{status}"
+    
+    # 请求体大小限制
+    [http.middlewares.limit]
+      [http.middlewares.limit.buffering]
+        maxRequestBodyBytes = 10485760  # 10MB
+        memRequestBodyBytes = 1048576   # 1MB
+        retryExpression = "IsNetworkError() && Attempts() <= 2"
+    
+    # 自定义响应头
+    [http.middlewares.customHeader]
+      [http.middlewares.customHeader.headers]
+        [http.middlewares.customHeader.headers.customResponseHeaders]
+          X-Gateway-Name = "RainbowBridge"
+          X-Gateway-Version = "1.0.0"
+          Server = ""
+          X-Powered-By = ""
+        [http.middlewares.customHeader.headers.customRequestHeaders]
+          X-Forwarded-Proto = "https"
+    
+    # 限流中间件
+    [http.middlewares.rateLimit]
+      [http.middlewares.rateLimit.rateLimit]
+        average = 100
+        burst = 200
+        period = "1s"
+    
+    # 熔断器
+    [http.middlewares.circuitBreaker]
+      [http.middlewares.circuitBreaker.circuitBreaker]
+        expression = "NetworkErrorRatio() > 0.30"
+        checkPeriod = "10s"
+        fallbackDuration = "30s"
+        recoveryDuration = "10s"
+    
+    # 重试机制
+    [http.middlewares.retry]
+      [http.middlewares.retry.retry]
+        attempts = 3
+        initialInterval = "100ms"
+    
+    # CORS配置
+    [http.middlewares.cors]
+      [http.middlewares.cors.headers]
+        accessControlAllowMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        accessControlAllowOriginList = ["*"]
+        accessControlAllowHeaders = ["Origin", "Content-Type", "Authorization", "X-Requested-With"]
+        accessControlExposeHeaders = ["X-Total-Count"]
+        accessControlAllowCredentials = false
+        accessControlMaxAge = 43200
+    
+    # 请求追踪
+    [http.middlewares.trace]
+      [http.middlewares.trace.headers]
+        [http.middlewares.trace.headers.customRequestHeaders]
+          X-Trace-ID = "{{.TraceID}}"
+          X-Request-ID = "{{.RequestID}}"
+
+# TCP配置（用于TCP代理）
+[tcp]
+  [tcp.routers]
+    [tcp.routers.mysql]
+      entryPoints = ["mysql"]
+      rule = "HostSNI(`*`)"
+      service = "mysql-service"
+    
+    [tcp.routers.redis]
+      entryPoints = ["redis"]
+      rule = "HostSNI(`*`)"
+      service = "redis-service"
+  
+  [tcp.services]
+    [tcp.services.mysql-service]
+      [tcp.services.mysql-service.loadBalancer]
+        [[tcp.services.mysql-service.loadBalancer.servers]]
+          address = "localhost:3306"
+    
+    [tcp.services.redis-service]
+      [tcp.services.redis-service.loadBalancer]
+        [[tcp.services.redis-service.loadBalancer.servers]]
+          address = "localhost:6379"
+
+# UDP配置（用于UDP代理）
+[udp]
+  [udp.routers]
+    [udp.routers.dns]
+      entryPoints = ["dns"]
+      service = "dns-service"
+  
+  [udp.services]
+    [udp.services.dns-service]
+      [udp.services.dns-service.loadBalancer]
+        [[udp.services.dns-service.loadBalancer.servers]]
+          address = "8.8.8.8:53"
+        [[udp.services.dns-service.loadBalancer.servers]]
+          address = "8.8.4.4:53"
+
+# 流量统计配置
+[metrics]
+  [metrics.influxDB]
+    address = "http://localhost:8086"
+    protocol = "http"
+    database = "rainbowbridge"
+    retentionPolicy = "autogen"
+    username = "admin"
+    password = "password"
+    addEntryPointsLabels = true
+    addServicesLabels = true
+    pushInterval = "10s"
+
+# API配置
+[api]
+  dashboard = true
+  debug = true
+  insecure = false
+
+# 日志配置
+[log]
+  level = "INFO"
+  format = "json"
+  filePath = "logs/rainbowbridge.log"
+
+# 访问日志配置
+[accessLog]
+  filePath = "logs/access.log"
+  format = "json"
+  [accessLog.fields]
+    defaultMode = "keep"
+    [accessLog.fields.names]
+      ClientUsername = "drop"
+    [accessLog.fields.headers]
+      defaultMode = "keep"
+      [accessLog.fields.headers.names]
+        User-Agent = "redact"
+        Authorization = "drop"
+        Content-Type = "keep"
+
+# 健康检查配置
+[ping]
+  entryPoint = "api"
+
+# 协议转换配置（Mixer模块）
+[mixer]
+  [mixer.rules]
+    [mixer.rules.http-to-grpc]
+      name = "http-to-grpc"
+      sourceProtocol = "http"
+      targetProtocol = "grpc"
+      sourcePattern = "/api/v1/grpc/*"
+      targetEndpoint = "localhost:9200"
+      timeout = "30s"
+      enabled = true
+    
+    [mixer.rules.http-to-tcp]
+      name = "http-to-tcp"
+      sourceProtocol = "http"
+      targetProtocol = "tcp"
+      sourcePattern = "/api/v1/tcp/*"
+      targetEndpoint = "localhost:9400"
+      timeout = "30s"
+      enabled = true
+    
+    [mixer.rules.websocket-upgrade]
+      name = "websocket-upgrade"
+      sourceProtocol = "http"
+      targetProtocol = "websocket"
+      sourcePattern = "/ws/*"
+      targetEndpoint = "localhost:9100"
+      timeout = "0s"  # WebSocket连接不设置超时
+      enabled = true
+
+# 额外的入口点配置
+[entryPoints.mysql]
+  address = ":3306"
+
+[entryPoints.redis]
+  address = ":6379"
+
+[entryPoints.dns]
+  address = ":53/udp"
+
+[entryPoints.grpc]
+  address = ":9090"
+  [entryPoints.grpc.http2]
+    maxConcurrentStreams = 250
+
+# 集群配置（用于多实例部署）
+[cluster]
+  store = "consul"
+  prefix = "rainbowbridge"
+  
+  [cluster.consul]
+    rootKey = "rainbowbridge"
+    endpoints = ["localhost:8500"]
+    pollInterval = "5s"
+    exposedByDefault = false
+
+# 证书解析器配置（用于自动证书管理）
+[certificatesResolvers]
+  [certificatesResolvers.letsencrypt]
+    [certificatesResolvers.letsencrypt.acme]
+      email = "admin@example.com"
+      storage = "acme.json"
+      [certificatesResolvers.letsencrypt.acme.httpChallenge]
+        entryPoint = "http"
+      [certificatesResolvers.letsencrypt.acme.dnsChallenge]
+        provider = "cloudflare"
+        delayBeforeCheck = "0s"
+        resolvers = ["1.1.1.1:53", "8.8.8.8:53"]
+
+# 插件配置
+[experimental]
+  [experimental.plugins]
+    [experimental.plugins.demo]
+      moduleName = "github.com/example/demo-plugin"
+      version = "v1.0.0"

@@ -1,21 +1,288 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
 # Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+rainbowbridge
+rainbowbridge_*
 
 # Test binary, built with `go test -c`
 *.test
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+*.html
+coverage.out
+coverage.html
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
 
 # Go workspace file
 go.work
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+logs/
+*.log
+
+# Configuration files with sensitive data
+*.env
+.env.*
+configs/production.toml
+configs/staging.toml
+configs/local.toml
+
+# Certificate files
+certs/
+*.pem
+*.crt
+*.key
+*.p12
+*.pfx
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Build artifacts
+build/
+dist/
+release/
+
+# Docker files
+.dockerignore
+
+# Kubernetes files
+*.yaml.bak
+*.yml.bak
+
+# Backup files
+*.bak
+*.backup
+
+# Archive files
+*.tar
+*.tar.gz
+*.zip
+*.rar
+
+# Documentation build
+docs/_build/
+site/
+
+# Node.js (if using for frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (if using for scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Local development
+.local/
+local/
+
+# Monitoring and metrics
+prometheus/
+grafana/
+
+# InfluxDB data
+influxdb/
+
+# Redis data
+redis/
+
+# Consul data
+consul/
+
+# Etcd data
+etcd/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Ansible
+*.retry
+
+# Vagrant
+.vagrant/
+
+# Helm charts
+charts/*.tgz
+
+# ACME certificates
+acme.json
+
+# Let's Encrypt
+.well-known/
+
+# Traefik
+traefik.log
+access.log
+
+# Custom application files
+data/
+storage/
+uploads/
+static/uploads/
+
+# Performance profiling
+*.prof
+*.pprof
+cpu.prof
+mem.prof
+block.prof
+mutex.prof
+
+# Benchmarking results
+bench.txt
+benchmark.txt
+
+# Security scan results
+security-report.txt
+vuln-report.txt
+
+# API documentation
+swagger/
+api-docs/
+
+# Generated protobuf files
+*.pb.go
+
+# Wire generated files
+wire_gen.go
+
+# Mockery generated files
+mocks/
+
+# Air live reload
+.air.toml
+tmp/
+
+# GoReleaser
+dist/
+.goreleaser.yml
+
+# Delve debugger
+__debug_bin
+
+# GoLand
+.idea/
+
+# VSCode
+.vscode/
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+.netrwhist
+*~
+tags
+[._]*.un~
